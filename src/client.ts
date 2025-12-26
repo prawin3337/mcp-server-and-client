@@ -1,6 +1,9 @@
 import "dotenv/config"
-import { createGoogleGenerativeAI } from "@ai-sdk/google"
-import { confirm, input, select } from "@inquirer/prompts"
+// import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import OpenAI from "openai";
+import confirm from "@inquirer/confirm"
+import input from "@inquirer/input"
+import select from "@inquirer/select"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import {
@@ -25,9 +28,13 @@ const transport = new StdioClientTransport({
   stderr: "ignore",
 })
 
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-})
+// const google = createGoogleGenerativeAI({
+//   apiKey: process.env.GEMINI_API_KEY,
+// })
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 async function main() {
   await mcp.connect(transport)
@@ -129,34 +136,112 @@ async function main() {
   }
 }
 
+function toOpenAISchema(vercelSchema: any) {
+  const schema = vercelSchema?.jsonSchema ?? vercelSchema;
+
+  if (!schema || schema.type === "None") {
+    return {
+      type: "object",
+      properties: {},
+      required: [],
+    };
+  }
+
+  if (schema.type !== "object") {
+    throw new Error("OpenAI function parameters must be type: object");
+  }
+
+  return schema;
+}
+
+
 async function handleQuery(tools: Tool[]) {
+  console.log('tools:', tools);
   const query = await input({ message: "Enter your query" })
 
-  const { text, toolResults } = await generateText({
-    model: google("gemini-2.0-flash"),
-    prompt: query,
-    tools: tools.reduce(
-      (obj, tool) => ({
-        ...obj,
-        [tool.name]: {
-          description: tool.description,
-          parameters: jsonSchema(tool.inputSchema),
-          execute: async (args: Record<string, any>) => {
-            return await mcp.callTool({
-              name: tool.name,
-              arguments: args,
-            })
-          },
-        },
-      }),
-      {} as ToolSet
-    ),
-  })
+  // const { text, toolResults } = await generateText({
+  //   model: google("gemini-2.0-flash"),
+  //   prompt: query,
+  //   tools: tools.reduce(
+  //     (obj, tool) => ({
+  //       ...obj,
+  //       [tool.name]: {
+  //         description: tool.description,
+  //         parameters: jsonSchema(tool.inputSchema),
+  //         execute: async (args: Record<string, any>) => {
+  //           return await mcp.callTool({
+  //             name: tool.name,
+  //             arguments: args,
+  //           })
+  //         },
+  //       },
+  //     }),
+  //     {} as ToolSet
+  //   ),
+  // })
 
-  console.log(
-    // @ts-expect-error
-    text || toolResults[0]?.result?.content[0]?.text || "No text generated."
-  )
+  // console.log(
+  //   // @ts-expect-error
+  //   text || toolResults[0]?.result?.content[0]?.text || "No text generated."
+  // )
+
+  const openAiFunctions = tools.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    parameters: toOpenAISchema(tool.parameters)
+  }));
+
+  console.log('openAiFunctions:', openAiFunctions);
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    messages: [
+      { role: "user", content: query }
+    ],
+    functions: openAiFunctions,
+    function_call: "auto",
+  });
+
+  console.log('response:', response);
+
+  const message: any = response.choices[0].message;
+
+  let finalText = message.content;
+
+  // Support both legacy `tool_calls` and OpenAI `function_call`
+  const calls = message.tool_calls ?? (message.function_call ? [message.function_call] : [])
+
+  if (calls.length) {
+    for (const call of calls) {
+      const functionName = call.function?.name ?? call.name
+      const functionArgsString = call.function?.arguments ?? call.arguments ?? "{}"
+      const functionArgs = functionArgsString ? JSON.parse(functionArgsString) : {}
+
+      const result = await mcp.callTool({
+        name: functionName,
+        arguments: functionArgs,
+      })
+
+      // Send function/tool result back to OpenAI as a `function` message
+      const followUp = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          { role: "user", content: query },
+          message,
+          {
+            role: "function",
+            name: functionName,
+            content: JSON.stringify(result),
+          },
+        ],
+      })
+
+      finalText = followUp.choices[0].message.content
+    }
+  }
+
+  console.log(finalText || "No text generated.");
+
 }
 
 async function handleTool(tool: Tool) {
@@ -229,10 +314,14 @@ async function handleServerMessagePrompt(message: PromptMessage) {
 
   if (!run) return
 
-  const { text } = await generateText({
-    model: google("gemini-2.0-flash"),
-    prompt: message.content.text,
-  })
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    messages: [
+      { role: "user", content: message.content.text }
+    ],
+  });
+
+  const text = completion.choices[0].message.content;
 
   return text
 }

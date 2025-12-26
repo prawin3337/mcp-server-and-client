@@ -6,7 +6,8 @@
     "server:build": "tsc",
     "server:build:watch": "tsc --watch",
     "server:dev": "tsx src/server.ts",
-    "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run server:dev",
+    "server:inspect-old": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run server:dev",
+    "server:inspect": "cross-env DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run server:dev",
     "client:dev": "tsx src/client.ts"
   },
   "keywords": [],
@@ -16,15 +17,17 @@
   "devDependencies": {
     "@modelcontextprotocol/inspector": "^0.14.3",
     "@types/node": "^24.0.3",
+    "cross-env": "^10.1.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@ai-sdk/google": "^1.2.19",
+    "@ai-sdk/google": "^1.2.22",
     "@inquirer/prompts": "^7.5.3",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "ai": "^4.3.16",
     "dotenv": "^16.5.0",
+    "openai": "^6.15.0",
     "zod": "^3.25.67"
   }
 }

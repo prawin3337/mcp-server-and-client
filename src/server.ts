@@ -80,36 +80,7 @@ server.resource(
   }
 )
 
-server.tool(
-  "create-user",
-  "Create a new user in the database",
-  {
-    name: z.string(),
-    email: z.string(),
-    address: z.string(),
-    phone: z.string(),
-  },
-  {
-    title: "Create User",
-    readOnlyHint: false,
-    destructiveHint: false,
-    idempotentHint: false,
-    openWorldHint: true,
-  },
-  async params => {
-    try {
-      const id = await createUser(params)
 
-      return {
-        content: [{ type: "text", text: `User ${id} created successfully` }],
-      }
-    } catch {
-      return {
-        content: [{ type: "text", text: "Failed to save user" }],
-      }
-    }
-  }
-)
 
 server.tool(
   "create-random-user",
@@ -168,23 +139,33 @@ server.tool(
   }
 )
 
-server.prompt(
-  "generate-fake-user",
-  "Generate a fake user based on a given name",
+server.tool(
+  "create-user",
+  "Create a new user in the database",
   {
     name: z.string(),
+    email: z.string(),
+    address: z.string(),
+    phone: z.string(),
   },
-  ({ name }) => {
-    return {
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Generate a fake user with the name ${name}. The user should have a realistic email, address, and phone number.`,
-          },
-        },
-      ],
+  {
+    title: "Create User",
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
+  async params => {
+    try {
+      const id = await createUser(params)
+
+      return {
+        content: [{ type: "text", text: `User ${id} created successfully` }],
+      }
+    } catch {
+      return {
+        content: [{ type: "text", text: "Failed to save user" }],
+      }
     }
   }
 )
@@ -207,6 +188,29 @@ async function createUser(user: {
 
   return id
 }
+
+server.prompt(
+  "generate-fake-user",
+  "Generate a fake user based on a given name",
+  {
+    name: z.string(),
+  },
+  ({ name }) => {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Generate a fake user with the name ${name}. The user should have a realistic email, address, and phone number.`,
+          },
+        },
+      ],
+    }
+  }
+)
+
+
 
 async function main() {
   const transport = new StdioServerTransport()

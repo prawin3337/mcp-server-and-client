@@ -82,5 +82,26 @@
     "email": "s@g.com",
     "address": "Dhankawadi",
     "phone": "789456123"
+  },
+  {
+    "id": 13,
+    "name": "Mangesh Patil",
+    "email": "mangesh.patil@example.com",
+    "address": "Flat 6B, Green Meadows Apartments, 12 M.G. Road, Shivajinagar, Pune, Maharashtra 411005, India",
+    "phone": "+91 98234 56789"
+  },
+  {
+    "id": 14,
+    "name": "Emily Johnson",
+    "email": "emily.johnson87@example.com",
+    "address": "742 Evergreen Terrace, Springfield, IL 62704",
+    "phone": "+1-217-555-4829"
+  },
+  {
+    "id": 15,
+    "name": "Emily Carter",
+    "email": "emily.carter87@example.com",
+    "address": "742 Evergreen Terrace, Springfield, IL 62704",
+    "phone": "+1-217-555-4832"
   }
 ]
