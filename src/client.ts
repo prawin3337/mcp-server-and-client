@@ -137,8 +137,7 @@ async function main() {
 }
 
 function toOpenAISchema(vercelSchema: any) {
-  const schema = vercelSchema?.jsonSchema ?? vercelSchema;
-
+  const schema = vercelSchema?.inputSchema ?? vercelSchema;
   if (!schema || schema.type === "None") {
     return {
       type: "object",
@@ -151,12 +150,15 @@ function toOpenAISchema(vercelSchema: any) {
     throw new Error("OpenAI function parameters must be type: object");
   }
 
-  return schema;
+  return {
+    type: schema.type,
+    properties: schema.properties || {},
+    required: schema.required || [],
+  };
 }
 
 
 async function handleQuery(tools: Tool[]) {
-  console.log('tools:', tools);
   const query = await input({ message: "Enter your query" })
 
   // const { text, toolResults } = await generateText({
@@ -188,10 +190,8 @@ async function handleQuery(tools: Tool[]) {
   const openAiFunctions = tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
-    parameters: toOpenAISchema(tool.parameters)
+    parameters: toOpenAISchema(tool)
   }));
-
-  console.log('openAiFunctions:', openAiFunctions);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
@@ -202,7 +202,7 @@ async function handleQuery(tools: Tool[]) {
     function_call: "auto",
   });
 
-  console.log('response:', response);
+  console.log('response:', JSON.stringify(response));
 
   const message: any = response.choices[0].message;
 

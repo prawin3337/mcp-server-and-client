@@ -170,6 +170,53 @@ server.tool(
   }
 )
 
+server.tool(
+  "find-user",
+  "Find a user's details by id, name, email, or phone",
+  {
+    id: z.number().optional(),
+    name: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+  },
+  {
+    title: "Find User",
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
+  async params => {
+    if (params.id === undefined && !params.name && !params.email && !params.phone) {
+      return { content: [{ type: "text", text: JSON.stringify({ error: "At least one search parameter is required" }) }] }
+    }
+    const users = await import("./data/users.json", {
+      with: { type: "json" },
+    }).then(m => m.default)
+
+    let user: any | undefined
+
+    if (params.id !== undefined) {
+      user = users.find((u: any) => u.id === Number(params.id))
+    } else if (params.email) {
+      user = users.find((u: any) => u.email === params.email)
+    } else if (params.phone) {
+      const normalize = (s: string) => s.replace(/\D/g, "")
+      const target = normalize(params.phone)
+      user = users.find((u: any) => normalize(u.phone) === target)
+    } else if (params.name) {
+      const target = params.name.toLowerCase()
+      user = users.find((u: any) => u.name.toLowerCase() === target || u.name.toLowerCase().includes(target))
+    }
+
+    if (!user) {
+      return { content: [{ type: "text", text: JSON.stringify({ error: "User not found" }) }] }
+    }
+
+    return { content: [{ type: "text", text: JSON.stringify(user) }] }
+  }
+)
+
 async function createUser(user: {
   name: string
   email: string
