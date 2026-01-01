@@ -96,5 +96,12 @@
     "email": "pravin@example.com",
     "address": "123 Main St, Cityville",
     "phone": "123-456-7890"
+  },
+  {
+    "id": 15,
+    "name": "Emily Carter",
+    "email": "emily.carter89@example.com",
+    "address": "742 Evergreen Terrace, Springfield, IL 62704",
+    "phone": "+1-217-555-7428"
   }
 ]

@@ -202,8 +202,24 @@ async function handleQuery(tools: Tool[]) {
     function_call: "auto",
   });
 
-  console.log('response:', JSON.stringify(response));
-
+  /**  
+   * message format from OpenAI
+   * {
+   *    "role":"assistant",
+   *    "content":null,
+   *    "function_call":{"name":"create-random-user","arguments":"{}"},
+   *    "refusal":null,
+   *    "annotations":[]
+   * }
+   * OR
+   * {
+   *    "role":"assistant",
+   *    "content":null,
+   *    "function_call":{
+   *      "name":"create-user",
+   *      "arguments":"{\"name\":\"pravin\",\"email\":\"\",\"address\":\"qwe\",\"phone\":\"78945\"}"
+   * }
+  */
   const message: any = response.choices[0].message;
 
   let finalText = message.content;
@@ -217,26 +233,39 @@ async function handleQuery(tools: Tool[]) {
       const functionArgsString = call.function?.arguments ?? call.arguments ?? "{}"
       const functionArgs = functionArgsString ? JSON.parse(functionArgsString) : {}
 
-      const result = await mcp.callTool({
+      /**
+       * Example result from MCP
+       * {"content":[{"type":"text","text":"User 15 created successfully"}]}
+       */
+      const result: any = await mcp.callTool({
         name: functionName,
         arguments: functionArgs,
       })
+  
+      finalText = result.content[0].text;
 
       // Send function/tool result back to OpenAI as a `function` message
-      const followUp = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: [
-          { role: "user", content: query },
-          message,
-          {
-            role: "function",
-            name: functionName,
-            content: JSON.stringify(result),
-          },
-        ],
-      })
+      // const followUp = await openai.chat.completions.create({
+      //   model: "gpt-4.1-mini",
+      //   messages: [
+      //     { role: "user", content: query },
+      //     message,
+      //     {
+      //       role: "function",
+      //       name: functionName,
+      //       content: JSON.stringify(result),
+      //     },
+      //   ],
+      // })
 
-      finalText = followUp.choices[0].message.content
+      /**
+       * {
+       *    "role":"assistant",
+       *    "content":"User named Anil with phone 789456, email a@b.com, and address qwe has been created successfully.",
+       *    "refusal":null,"annotations":[]
+       * }
+       */
+      // finalText = followUp.choices[0].message.content
     }
   }
 
